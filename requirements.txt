@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+requests
+pypdf2
+replicate
+pymupdf
+python-dotenv
+azure-storage-blob
+
