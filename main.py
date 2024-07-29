@@ -44,26 +44,20 @@ def rename_image_file(file_name):
     return new_name
 
 
-def extract_file_name_from_url(url):
-    # Parse the URL to get the path
+def extract_path_from_url(url):
+    # Parse the URL
     parsed_url = urllib.parse.urlparse(url)
     path = parsed_url.path
-    
-    # Extract the file name from the path
-    file_name_with_ext = os.path.basename(path)
-    
-    # Remove the .pdf extension if present
-    file_name, _ = os.path.splitext(file_name_with_ext)
-    
-    return file_name
 
-def extract_base_path(pdf_url):
-    parsed_url = urllib.parse.urlparse(pdf_url)
-    path = parsed_url.path
-    base_path = path.replace('/bynd-pdfs/', '/bynd-pdfs/').strip('/')
-    if base_path.endswith('.pdf'):
-        base_path = base_path[:-4]
+    # Remove the initial '/bynd-pdfs' and the trailing '/RAW/SPIL-AR2022-23-Complete-Annual-Report.pdf'
+    parts = path.split('/')
+    if len(parts) > 3:
+        base_path = '/'.join(parts[2:-2])  # Extract parts between '/bynd-pdfs/' and '/RAW'
+    else:
+        base_path = ''  # Handle edge cases if there are fewer parts
+
     return base_path
+
 
 def upload_image_to_blob(file_path, container_name, connection_string, base_path):
     blob_service_client = BlobServiceClient.from_connection_string(connection_string)
@@ -162,7 +156,7 @@ def extract_element_coords(filePath, pdf_url):
         table_info = []
         image_info = []
 
-        base_path = extract_file_name_from_url(pdf_url)
+        base_path = extract_path_from_url(pdf_url)
 
         for j in sorted(os.listdir("splitPDF"), key=numerical_sort):
             image_coordinates = []
@@ -280,7 +274,7 @@ def process_and_save_to_blob(pdf_url: str):
         with open(pdf_filename, 'wb') as file:
             file.write(response.content)
 
-        blob_name = f"{file_name}/processed/table/bounding-box-tables.json"   
+        blob_name = f"{extract_path_from_url(pdf_url)}/processed/table/bounding-box-tables.json"   
         logger.info(f"Blob name: {blob_name}")
 
         extract_element_coords(pdf_filename, pdf_url)
