@@ -274,32 +274,46 @@ def process_and_save_to_blob(pdf_url: str):
         with open(pdf_filename, 'wb') as file:
             file.write(response.content)
 
-        blob_name = f"{extract_path_from_url(pdf_url)}/processed/table/bounding-box-tables.json"   
-        logger.info(f"Blob name: {blob_name}")
+        blob_name_table = f"{extract_path_from_url(pdf_url)}/processed/table/bounding-box-tables.json"   
+        logger.info(f"Table Blob name: {blob_name_table}")
+
+
+
+        blob_name_image = f"{extract_path_from_url(pdf_url)}/processed/table/bounding-box-image.json"
+        logger.info(f"Table Blob name: {blob_name_table}")
+
 
         extract_element_coords(pdf_filename, pdf_url)
 
         with open('bounding-box-tables.json', 'r') as f:
-            data = json.load(f)
+            table_data = json.load(f)
 
-        data = process_tables(data)
-        merge_close_tables(data)
+        with open('bounding-box-image.json', 'r') as f:
+            image_data = json.load(f)    
 
-        container_name = os.getenv("AZURE_CONTAINER_NAME")
-        connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+        table_data = process_tables(table_data)
+        merge_close_tables(table_data)
 
-        blob_service_client = BlobServiceClient.from_connection_string(connection_string)
-        container_client = blob_service_client.get_container_client(container_name)
-
-        blob_client = container_client.get_blob_client(blob_name)
-        logger.info("Uploading processed data to blob.")
-        blob_client.upload_blob(json.dumps(data), overwrite=True)
+        upload_to_blob(table_data, blob_name_table)
+        upload_to_blob(image_data, blob_name_image)
 
         os.remove(pdf_filename)
         logger.info("Processing completed successfully.")
     except Exception as e:
         logger.error(f"Error in background task: {str(e)}")
         raise
+
+def upload_to_blob(data, blob_name):
+    container_name = os.getenv("AZURE_CONTAINER_NAME")
+    connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+
+    blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+    container_client = blob_service_client.get_container_client(container_name)
+
+    blob_client = container_client.get_blob_client(blob_name)
+    logger.info("Uploading processed data to blob.")
+    blob_client.upload_blob(json.dumps(data), overwrite=True)
+
 
 @app.post("/extract-coords/")
 async def extract_coords(background_tasks: BackgroundTasks, pdf_url: str = Form(...)):
@@ -310,3 +324,6 @@ async def extract_coords(background_tasks: BackgroundTasks, pdf_url: str = Form(
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+
