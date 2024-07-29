@@ -279,7 +279,7 @@ def process_and_save_to_blob(pdf_url: str):
 
 
 
-        blob_name_image = f"{extract_path_from_url(pdf_url)}/processed/table/bounding-box-image.json"
+        blob_name_image = f"{extract_path_from_url(pdf_url)}/processed/table/bounding-box-images.json"
         logger.info(f"Table Blob name: {blob_name_table}")
 
 
@@ -288,7 +288,7 @@ def process_and_save_to_blob(pdf_url: str):
         with open('bounding-box-tables.json', 'r') as f:
             table_data = json.load(f)
 
-        with open('bounding-box-image.json', 'r') as f:
+        with open('bounding-box-images.json', 'r') as f:
             image_data = json.load(f)    
 
         table_data = process_tables(table_data)
