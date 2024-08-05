@@ -8,13 +8,12 @@ import replicate
 import urllib3
 import uuid
 import logging
-from PIL import Image
 from PyPDF2 import PdfReader, PdfWriter
 import fitz
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Form
+from fastapi import BackgroundTasks, FastAPI, Form
 from fastapi.responses import JSONResponse
-from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+from azure.storage.blob import BlobServiceClient
 import urllib.parse
 
 # Load environment variables
@@ -277,11 +276,8 @@ def process_and_save_to_blob(pdf_url: str):
         blob_name_table = f"{extract_path_from_url(pdf_url)}/processed/table/bounding-box-tables.json"   
         logger.info(f"Table Blob name: {blob_name_table}")
 
-
-
         blob_name_image = f"{extract_path_from_url(pdf_url)}/processed/table/bounding-box-images.json"
         logger.info(f"Table Blob name: {blob_name_table}")
-
 
         extract_element_coords(pdf_filename, pdf_url)
 
@@ -296,8 +292,8 @@ def process_and_save_to_blob(pdf_url: str):
 
         upload_to_blob(table_data, blob_name_table)
         upload_to_blob(image_data, blob_name_image)
-
         os.remove(pdf_filename)
+        call_chunks_cleaner_api(pdf_url)
         logger.info("Processing completed successfully.")
     except Exception as e:
         logger.error(f"Error in background task: {str(e)}")
@@ -313,6 +309,20 @@ def upload_to_blob(data, blob_name):
     blob_client = container_client.get_blob_client(blob_name)
     logger.info("Uploading processed data to blob.")
     blob_client.upload_blob(json.dumps(data), overwrite=True)
+
+
+def call_chunks_cleaner_api(pdf_url):
+    url = "https://bynd-table-detection-task-function.azurewebsites.net/api/tasks?code=r2gfb77lXPQrSvtqyS9ZOjuUYVAOLM1PL5z5Ghr04ZddAzFuuyE_Ug%3D%3D"
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    body = {
+    "step": "CLEANER",
+    "pdf_url": pdf_url
+    }
+
+    response = requests.post(url, headers=headers, json=body)
+    return response.json()    
 
 
 @app.post("/extract-coords/")

@@ -3,3 +3,4 @@ venv/
 
 # Ignore environment configuration
 .env
+.venv
